@@ -1,0 +1,18 @@
+{
+    "node": "n8n-nodes-s3-presigner.awsS3Presigner",
+    "nodeVersion": "1.0",
+    "codexVersion": "1.0",
+    "categories": ["Development", "Data & Storage"],
+    "resources": {
+        "credentialDocumentation": [
+            {
+                "url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html"
+            }
+        ],
+        "primaryDocumentation": [
+            {
+                "url": "https://docs.aws.amazon.com/AmazonS3/latest/userguide/ShareObjectPreSignedURL.html"
+            }
+        ]
+    }
+}
