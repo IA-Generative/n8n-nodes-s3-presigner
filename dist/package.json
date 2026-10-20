@@ -1,7 +1,7 @@
 {
     "name": "n8n-nodes-s3-presigner",
     "version": "0.1.0",
-    "description": "Custom n8n node for AWS S3 Presigned URLs",
+    "description": "Custom n8n node for S3 Presigned URLs",
     "homepage": "https://github.com/ia-generative/n8n-nodes-s3-presigner",
     "author": {
         "name": "Vishal Varma",
@@ -13,9 +13,7 @@
     },
     "scripts": {
         "build": "n8n-node build",
-        "dev": "n8n-node dev",
-        "lint": "n8n-node lint",
-        "lint:fix": "n8n-node lint --fix"
+        "dev": "n8n-node dev"
     },
     "files": [
         "dist"
@@ -23,22 +21,17 @@
     "n8n": {
         "n8nNodesApiVersion": 1,
         "strict": false,
-        "credentials": [
-            "dist/credentials/AwsApi.credentials.js"
-        ],
         "nodes": [
-            "dist/nodes/AwsS3Presigner/AwsS3Presigner.node.js"
+            "dist/nodes/S3Presigner/S3Presigner.node.js"
         ]
     },
     "dependencies": {
         "@aws-sdk/client-s3": "^3.0.0",
-        "@aws-sdk/client-sts": "^3.0.0",
-        "@aws-sdk/s3-request-presigner": "^3.0.0"
+        "@aws-sdk/s3-request-presigner": "^3.0.0",
+        "@smithy/node-http-handler": "^4.0.0"
     },
     "devDependencies": {
         "@n8n/node-cli": "*",
-        "eslint": "9.29.0",
-        "prettier": "3.8.3",
         "typescript": "5.9.3"
     },
     "peerDependencies": {

@@ -1,5 +1,5 @@
 {
-	"node": "n8n-nodes-s3-presigner.awsS3Presigner",
+	"node": "n8n-nodes-s3-presigner.s3Presigner",
 	"nodeVersion": "1.0",
 	"codexVersion": "1.0",
 	"categories": ["Development", "Data & Storage"],
@@ -7,6 +7,9 @@
 		"credentialDocumentation": [
 			{
 				"url": "https://docs.aws.amazon.com/IAM/latest/UserGuide/id_credentials_access-keys.html"
+			},
+			{
+				"url": "https://docs.n8n.io/integrations/builtin/credentials/s3/"
 			}
 		],
 		"primaryDocumentation": [

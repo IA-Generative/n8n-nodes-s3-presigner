@@ -21,17 +21,14 @@
 	"n8n": {
 		"n8nNodesApiVersion": 1,
 		"strict": false,
-		"credentials": [
-			"dist/credentials/AwsApi.credentials.js"
-		],
 		"nodes": [
-			"dist/nodes/AwsS3Presigner/AwsS3Presigner.node.js"
+			"dist/nodes/S3Presigner/S3Presigner.node.js"
 		]
 	},
 	"dependencies": {
 		"@aws-sdk/client-s3": "^3.0.0",
-		"@aws-sdk/client-sts": "^3.0.0",
-		"@aws-sdk/s3-request-presigner": "^3.0.0"
+		"@aws-sdk/s3-request-presigner": "^3.0.0",
+		"@smithy/node-http-handler": "^4.0.0"
 	},
 	"devDependencies": {
 		"@n8n/node-cli": "*",

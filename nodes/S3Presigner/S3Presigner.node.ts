@@ -1,47 +1,65 @@
 import { GetObjectCommand, PutObjectCommand, S3Client } from '@aws-sdk/client-s3';
-import { GetCallerIdentityCommand, STSClient } from '@aws-sdk/client-sts';
+import { NodeHttpHandler } from '@smithy/node-http-handler';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
-import type {
-	ICredentialsDecrypted,
-	ICredentialTestFunctions,
-	IExecuteFunctions,
-	INodeCredentialTestResult,
-	INodeExecutionData,
-	INodeType,
-	INodeTypeDescription,
-} from 'n8n-workflow';
+import https from 'https';
+import type { IExecuteFunctions, INodeExecutionData, INodeType, INodeTypeDescription } from 'n8n-workflow';
 import { NodeConnectionTypes, NodeOperationError } from 'n8n-workflow';
 
-interface AwsApiCredentials {
-	accessKeyId: string;
-	secretAccessKey: string;
-	sessionToken?: string;
-	region: string;
-}
-
-export class AwsS3Presigner implements INodeType {
+export class S3Presigner implements INodeType {
 	description: INodeTypeDescription = {
-		displayName: 'AWS S3 Pre-signed URL',
-		name: 'awsS3Presigner',
+		displayName: 'S3 Presigner',
+		name: 's3Presigner',
 		icon: 'file:s3.svg',
 		group: ['transform'],
 		version: 1,
 		subtitle: '={{$parameter["operation"] === "putObject" ? "Upload (PUT)" : "Download (GET)"}}',
-		description: 'Generates pre-signed URLs for AWS S3 objects',
+		description: 'Generates pre-signed URLs for S3 objects',
 		defaults: {
-			name: 'AWS S3 Pre-signed URL',
+			name: 'S3 Presigner',
 		},
 		inputs: [NodeConnectionTypes.Main],
 		outputs: [NodeConnectionTypes.Main],
 		usableAsTool: true,
 		credentials: [
 			{
-				name: 'awsApi',
+				name: 's3',
 				required: true,
-				testedBy: 'awsApiTest',
+				displayOptions: {
+					show: {
+						authentication: ['s3'],
+					},
+				},
+			},
+			{
+				name: 'aws',
+				required: true,
+				displayOptions: {
+					show: {
+						authentication: ['aws'],
+					},
+				},
 			},
 		],
 		properties: [
+			{
+				displayName: 'Authentication',
+				name: 'authentication',
+				type: 'options',
+				noDataExpression: true,
+				options: [
+					{
+						name: 'S3',
+						value: 's3',
+						description: 'Use native n8n S3 credentials for S3-compatible storage',
+					},
+					{
+						name: 'AWS (IAM)',
+						value: 'aws',
+						description: 'Use native n8n AWS credentials',
+					}
+				],
+				default: 's3',
+			},
 			{
 				displayName: 'Operation',
 				name: 'operation',
@@ -91,7 +109,7 @@ export class AwsS3Presigner implements INodeType {
 				},
 				default: 3600,
 				description:
-					'How long the pre-signed URL stays valid, in seconds. Maximum allowed by AWS is 604800 (7 days).',
+					'How long the pre-signed URL stays valid, in seconds. Maximum allowed is 604800 (7 days - value max on AWS).',
 			},
 			{
 				displayName: 'Region',
@@ -100,42 +118,17 @@ export class AwsS3Presigner implements INodeType {
 				default: '',
 				placeholder: 'eu-central-1',
 				description:
-					'AWS region of the bucket. Leave empty to use the region configured in the credentials.',
+					'AWS/S3 region of the bucket. Leave empty to use the region configured in the credentials.',
 			},
 		],
-	};
-
-	methods = {
-		credentialTest: {
-			async awsApiTest(
-				this: ICredentialTestFunctions,
-				credential: ICredentialsDecrypted,
-			): Promise<INodeCredentialTestResult> {
-				const credentials = credential.data as unknown as AwsApiCredentials;
-				try {
-					const stsClient = new STSClient({
-						region: credentials.region || 'us-east-1',
-						credentials: {
-							accessKeyId: credentials.accessKeyId,
-							secretAccessKey: credentials.secretAccessKey,
-							...(credentials.sessionToken ? { sessionToken: credentials.sessionToken } : {}),
-						},
-					});
-					await stsClient.send(new GetCallerIdentityCommand({}));
-					return { status: 'OK', message: 'Connection successful' };
-				} catch (error) {
-					const message = error instanceof Error ? error.message : String(error);
-					return { status: 'Error', message: `Credential test failed: ${message}` };
-				}
-			},
-		},
 	};
 
 	async execute(this: IExecuteFunctions): Promise<INodeExecutionData[][]> {
 		const items = this.getInputData();
 		const returnData: INodeExecutionData[] = [];
 
-		const credentials = await this.getCredentials('awsApi');
+		const authentication = this.getNodeParameter('authentication', 0) as 'aws' | 's3';
+		const credentials = await this.getCredentials(authentication);
 
 		for (let itemIndex = 0; itemIndex < items.length; itemIndex++) {
 			try {
@@ -163,25 +156,70 @@ export class AwsS3Presigner implements INodeType {
 					);
 				}
 
-				const region = regionOverride || (credentials.region as string);
-				if (!region) {
-					throw new NodeOperationError(
-						this.getNode(),
-						'No region provided. Set it in the node or in the credentials.',
-						{ itemIndex },
-					);
-				}
+				let region: string;
+				const s3ClientConfig: ConstructorParameters<typeof S3Client>[0] = {};
 
-				const s3Client = new S3Client({
-					region,
-					credentials: {
+				if (authentication === 'aws') {
+					region = regionOverride || (credentials.region as string);
+					if (!region) {
+						throw new NodeOperationError(
+							this.getNode(),
+							'No region provided. Set it in the node or in the AWS credentials.',
+							{ itemIndex },
+						);
+					}
+
+					s3ClientConfig.region = region;
+					s3ClientConfig.credentials = {
 						accessKeyId: credentials.accessKeyId as string,
 						secretAccessKey: credentials.secretAccessKey as string,
-						...(credentials.sessionToken
+						...(credentials.temporaryCredentials && credentials.sessionToken
 							? { sessionToken: credentials.sessionToken as string }
 							: {}),
-					},
-				});
+					};
+
+					if (
+						credentials.customEndpoints &&
+						credentials.s3Endpoint &&
+						(credentials.s3Endpoint as string).trim()
+					) {
+						s3ClientConfig.endpoint = (credentials.s3Endpoint as string).trim();
+					}
+				} else {
+					const endpoint = (credentials.endpoint as string | undefined)?.trim();
+					if (!endpoint) {
+						throw new NodeOperationError(
+							this.getNode(),
+							'S3 Endpoint must be configured in the S3 credentials.',
+							{ itemIndex },
+						);
+					}
+
+					region = regionOverride || (credentials.region as string);
+					if (!region) {
+						throw new NodeOperationError(
+							this.getNode(),
+							'No region provided. Set it in the node or in the S3 credentials.',
+							{ itemIndex },
+						);
+					}
+
+					s3ClientConfig.region = region;
+					s3ClientConfig.endpoint = endpoint;
+					s3ClientConfig.forcePathStyle = credentials.forcePathStyle as boolean;
+					s3ClientConfig.credentials = {
+						accessKeyId: credentials.accessKeyId as string,
+						secretAccessKey: credentials.secretAccessKey as string,
+					};
+
+					if (credentials.ignoreSSLIssues) {
+						s3ClientConfig.requestHandler = new NodeHttpHandler({
+							httpsAgent: new https.Agent({ rejectUnauthorized: false }),
+						});
+					}
+				}
+
+				const s3Client = new S3Client(s3ClientConfig);
 
 				const command =
 					operation === 'putObject'

@@ -1,12 +1,14 @@
 # n8n-nodes-s3-presigner
 
-A custom n8n node for generating **AWS S3 pre-signed URLs** — temporary, access-controlled URLs for downloading or uploading S3 objects without exposing AWS credentials to the client.
+A custom n8n node for generating **S3 pre-signed URLs** — temporary, access-controlled URLs for downloading or uploading S3 objects without exposing credentials to the client.
+
+Works with both **AWS S3** and **S3-compatible storage** (MinIO, Wasabi, DigitalOcean Spaces, Tigris, …) using the native n8n credentials.
 
 - **Download (GET)** – URL that lets the holder download a specific object.
 - **Upload (PUT)** – URL that lets the holder upload to a specific object key.
 - **Configurable expiration** – 1 second up to 604800 seconds (7 days, the AWS maximum).
 - **Per-node region override** – use the credential's region or override it on the node.
-- **Temporary credentials** – optional STS session token support.
+- **Temporary AWS credentials** – optional STS session token support via native AWS credentials.
 
 ## Installation
 
@@ -27,21 +29,46 @@ Restart n8n afterwards.
 
 ## Configuration
 
-### AWS credential (AWS API)
+The node uses the native n8n credential selector. Choose the authentication type that matches your provider.
+
+### Authentication selector
+
+| Option | Use for |
+|--------|---------|
+| **AWS (IAM)** | AWS S3 with IAM access keys. |
+| **S3** | S3-compatible providers (MinIO, Wasabi, DigitalOcean Spaces, Tigris, …). |
+
+### AWS (IAM) credential
+
+Use the native n8n **AWS** credential. Required fields:
 
 | Field | Description |
 |-------|-------------|
-| **Access Key ID** | AWS IAM access key |
-| **Secret Access Key** | AWS IAM secret key |
-| **Session Token** | *(optional)* only for temporary STS credentials |
 | **Region** | Default AWS region, e.g. `us-east-1`. Can be overridden per node. |
+| **Access Key ID** | AWS IAM access key. |
+| **Secret Access Key** | AWS IAM secret key. |
+| **Temporary Security Credentials** | Enable if you use an STS session token. |
+| **Session Token** | *(optional, visible when Temporary Security Credentials is on)* STS session token. |
+| **Custom Endpoints → S3 Endpoint** | *(optional)* Custom S3 endpoint, e.g. for AWS PrivateLink / VPC endpoint. |
 
-The credential is validated with an STS `GetCallerIdentity` call.
+### S3 credential
 
-### Node (AWS S3 Pre-signed URL)
+Use the native n8n **S3** credential. Required fields:
+
+| Field | Description |
+|-------|-------------|
+| **S3 Endpoint** | Endpoint URL of the S3-compatible provider. |
+| **Region** | Region for request signing, e.g. `us-east-1` or `auto`. Can be overridden per node. |
+| **Access Key ID** | Access key for the provider. |
+| **Secret Access Key** | Secret key for the provider. |
+| **Force Path Style** | Use path-style addressing (`https://endpoint/bucket/key`) instead of virtual-hosted style. |
+| **Ignore SSL Issues** | Disable SSL certificate validation (insecure, only use for local/test setups). |
+
+### Node (S3 Presigner)
 
 | Field | Description | Example |
 |-------|-------------|---------|
+| **Authentication** | `AWS (IAM)` or `S3` *(default: `S3`)* | S3 |
 | **Operation** | `Download Object (GET)` or `Upload Object (PUT)` | Download Object (GET) |
 | **Bucket Name** | Name of the S3 bucket | `my-bucket` |
 | **Object Key** | Key (path/filename) of the object | `uploads/document.pdf` |
@@ -66,13 +93,19 @@ The node passes through the incoming item's JSON and adds `presignedUrl` and `pr
 }
 ```
 
-## Required IAM Permissions
+## Required IAM / S3 Permissions
 
 Scope to your bucket and grant only what each operation needs:
 
 - **Download (GET)** – `s3:GetObject`
 - **Upload (PUT)** – `s3:PutObject`
-- **Credential test** – `sts:GetCallerIdentity`
+
+## Breaking changes
+
+Version 0.2.0 introduces the following breaking changes:
+
+- The node has been renamed from `AWS S3 Pre-signed URL` (`awsS3Presigner`) to **`S3 Presigner`** (`s3Presigner`). Existing workflows using the old node must be recreated or migrated.
+- The custom `AWS API` credential has been removed. Use the native n8n **AWS** or **S3** credentials instead.
 
 ## Development
 
@@ -81,3 +114,5 @@ npm install      # install dependencies
 npm run dev      # start n8n with the node in watch mode
 npm run build    # production build to dist/
 ```
+
+All commands run through Docker in this project (see `docker-compose.yml`).
