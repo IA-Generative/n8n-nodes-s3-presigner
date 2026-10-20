@@ -120,6 +120,20 @@ export class S3Presigner implements INodeType {
 				description:
 					'AWS/S3 region of the bucket. Leave empty to use the region configured in the credentials.',
 			},
+			{
+				displayName: 'Content Type',
+				name: 'contentType',
+				type: 'string',
+				default: '',
+				placeholder: 'application/octet-stream',
+				description:
+					'MIME type the uploader must send in the Content-Type header. Required when the uploading client sends this header, otherwise AWS returns 403. Default to application/octet-stream for AWS',
+				displayOptions: {
+					show: {
+						operation: ['putObject'],
+					},
+				},
+			},
 		],
 	};
 
@@ -159,7 +173,10 @@ export class S3Presigner implements INodeType {
 				let region: string;
 				const s3ClientConfig: ConstructorParameters<typeof S3Client>[0] = {};
 
+				let defaultContentType: string;
+
 				if (authentication === 'aws') {
+					defaultContentType = "application/octet-stream"
 					region = regionOverride || (credentials.region as string);
 					if (!region) {
 						throw new NodeOperationError(
@@ -186,6 +203,7 @@ export class S3Presigner implements INodeType {
 						s3ClientConfig.endpoint = (credentials.s3Endpoint as string).trim();
 					}
 				} else {
+					defaultContentType = ""
 					const endpoint = (credentials.endpoint as string | undefined)?.trim();
 					if (!endpoint) {
 						throw new NodeOperationError(
@@ -221,12 +239,26 @@ export class S3Presigner implements INodeType {
 
 				const s3Client = new S3Client(s3ClientConfig);
 
+				const contentType =
+					operation === 'putObject'
+						? (this.getNodeParameter('contentType', itemIndex, '') as string).trim() || defaultContentType
+						: "";
+
 				const command =
 					operation === 'putObject'
-						? new PutObjectCommand({ Bucket: bucketName, Key: objectKey })
+						? new PutObjectCommand({
+								Bucket: bucketName,
+								Key: objectKey,
+								...(contentType ? { ContentType: contentType } : {}),
+							})
 						: new GetObjectCommand({ Bucket: bucketName, Key: objectKey });
 
-				const presignedUrl = await getSignedUrl(s3Client, command, { expiresIn });
+				const presignedUrl = await getSignedUrl(s3Client, command, {
+					expiresIn,
+					...(operation === 'putObject' && contentType
+						? { signableHeaders: new Set(['content-type']) }
+						: {}),
+				});
 
 				returnData.push({
 					json: {
@@ -236,6 +268,7 @@ export class S3Presigner implements INodeType {
 							operation: operation === 'putObject' ? 'PUT' : 'GET',
 							bucket: bucketName,
 							key: objectKey,
+							contentType,
 							region,
 							expiresIn,
 							expiresAt: new Date(Date.now() + expiresIn * 1000).toISOString(),
