@@ -8,7 +8,10 @@ Works with both **AWS S3** and **S3-compatible storage** (MinIO, Wasabi, Digital
 - **Upload (PUT)** – URL that lets the holder upload to a specific object key.
 - **Configurable expiration** – 1 second up to 604800 seconds (7 days, the AWS maximum).
 - **Per-node region override** – use the credential's region or override it on the node.
-- **Temporary AWS credentials** – optional STS session token support via native AWS credentials.
+
+## Credits
+
+This package is inspired by and built on top of [klardatalabs/n8n-aws-s3-presigner](https://github.com/klardatalabs/n8n-aws-s3-presigner), which served as the base for this implementation.
 
 ## Installation
 
@@ -74,6 +77,7 @@ Use the native n8n **S3** credential. Required fields:
 | **Object Key** | Key (path/filename) of the object | `uploads/document.pdf` |
 | **Expires In (Seconds)** | How long the URL stays valid (1–604800) | `3600` |
 | **Region** | *(optional)* overrides the credential's region | `eu-central-1` |
+| **Content Type** | *(PUT only)* MIME type signed in the URL. The uploading client must send the same `Content-Type` header, otherwise AWS returns 403. Leave empty if the client sends no `Content-Type`. | `application/pdf` |
 
 ## Output
 
@@ -99,6 +103,20 @@ Scope to your bucket and grant only what each operation needs:
 
 - **Download (GET)** – `s3:GetObject`
 - **Upload (PUT)** – `s3:PutObject`
+
+### Upload (PUT): client-side upload
+
+A 403 on a pre-signed PUT usually comes from a mismatch between what is signed and what is sent:
+
+- Missing `s3:PutObject` IAM permission on the bucket/prefix.
+- `Content-Type` sent by the client differs from the one set in the node (or sent when the field is empty and the client adds one automatically).
+- URL used after expiration or with a modified key (different encoding).
+
+Upload example:
+
+```bash
+curl -X PUT -H "Content-Type: application/pdf" --data-binary @report.pdf "<presignedUrl>"
+```
 
 ## Breaking changes
 

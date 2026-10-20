@@ -127,7 +127,7 @@ export class S3Presigner implements INodeType {
 				default: '',
 				placeholder: 'application/octet-stream',
 				description:
-					'MIME type the uploader must send in the Content-Type header. Required when the uploading client sends this header, otherwise AWS returns 403. Default to application/octet-stream for AWS',
+					'MIME type the uploader must send in the Content-Type header. Required when the uploading client sends this header, otherwise AWS returns 403.', 
 				displayOptions: {
 					show: {
 						operation: ['putObject'],
@@ -173,10 +173,7 @@ export class S3Presigner implements INodeType {
 				let region: string;
 				const s3ClientConfig: ConstructorParameters<typeof S3Client>[0] = {};
 
-				let defaultContentType: string;
-
 				if (authentication === 'aws') {
-					defaultContentType = "application/octet-stream"
 					region = regionOverride || (credentials.region as string);
 					if (!region) {
 						throw new NodeOperationError(
@@ -203,7 +200,6 @@ export class S3Presigner implements INodeType {
 						s3ClientConfig.endpoint = (credentials.s3Endpoint as string).trim();
 					}
 				} else {
-					defaultContentType = ""
 					const endpoint = (credentials.endpoint as string | undefined)?.trim();
 					if (!endpoint) {
 						throw new NodeOperationError(
@@ -241,7 +237,7 @@ export class S3Presigner implements INodeType {
 
 				const contentType =
 					operation === 'putObject'
-						? (this.getNodeParameter('contentType', itemIndex, '') as string).trim() || defaultContentType
+						? (this.getNodeParameter('contentType', itemIndex, '') as string).trim() 
 						: "";
 
 				const command =
