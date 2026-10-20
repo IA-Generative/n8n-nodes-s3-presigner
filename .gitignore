@@ -3,7 +3,6 @@ node_modules
 .tmp
 .pnpm-store
 tmp
-dist
 npm-debug.log*
 yarn.lock
 .vscode/launch.json

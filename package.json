@@ -13,7 +13,9 @@
 	},
 	"scripts": {
 		"build": "n8n-node build",
-		"dev": "n8n-node dev"
+		"dev": "n8n-node dev",
+		"lint": "n8n-node lint",
+		"lint:fix": "n8n-node lint --fix"
 	},
 	"files": [
 		"dist"
