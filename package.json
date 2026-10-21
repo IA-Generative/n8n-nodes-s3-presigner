@@ -2,7 +2,7 @@
   "name": "n8n-nodes-s3-presigner",
   "version": "0.1.0",
   "description": "Custom n8n node for S3 Presigned URLs",
-  "homepage": "https://github.com/ia-generative/n8n-nodes-s3-presigner",
+  "homepage": "https://github.com/IA-Generative/n8n-nodes-s3-presigner",
 	"author": {
 		"name": "sebthemonster",
 		"email": "sebastien@sebthemonster.com"
@@ -10,7 +10,7 @@
 	"license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/ia-generative/n8n-nodes-s3-presigner.git"
+    "url": "git+https://github.com/IA-Generative/n8n-nodes-s3-presigner.git"
   },
   "scripts": {
     "build": "n8n-node build && node scripts/bundle.js",
