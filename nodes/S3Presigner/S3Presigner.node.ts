@@ -125,7 +125,7 @@ export class S3Presigner implements INodeType {
 				name: 'contentType',
 				type: 'string',
 				default: '',
-				placeholder: 'application/octet-stream',
+				placeholder: 'application/pdf',
 				description:
 					'MIME type the uploader must send in the Content-Type header. Required when the uploading client sends this header, otherwise AWS returns 403.', 
 				displayOptions: {
