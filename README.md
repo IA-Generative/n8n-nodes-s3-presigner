@@ -15,7 +15,9 @@ This package is inspired by and built on top of [klardatalabs/n8n-aws-s3-presign
 
 ## Installation
 
-Install directly from GitHub (the compiled `dist/` is committed, so no build step is needed on the server):
+### Option 1 : directly from GitHub 
+
+Install directly from Github:
 
 ```bash
 npm install github:ia-generative/n8n-nodes-s3-presigner
@@ -25,6 +27,19 @@ For Docker:
 
 ```bash
 docker exec n8n npm install github:ia-generative/n8n-nodes-s3-presigner
+docker restart n8n
+```
+
+## Option 2 : from npmjs registry
+
+```bash
+npm install n8n-nodes-s3-presigner
+```
+
+For Docker:
+
+```bash
+docker exec n8n npm install n8n-nodes-s3-presigner
 docker restart n8n
 ```
 

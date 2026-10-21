@@ -1,0 +1,5 @@
+{
+  "inputs": {
+    "package_name": "n8n-nodes-s3-presigner"
+  }
+}

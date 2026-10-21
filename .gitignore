@@ -16,3 +16,4 @@ ai_files
 n8n_data/
 n8n_cache/
 mitm-scripts/__pycache__
+dist/
