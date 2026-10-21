@@ -1,17 +1,6 @@
 name: Publier sur npm
 
 on:
-  workflow_dispatch:
-    inputs:
-      package_name:
-        description: "Nom du package du nœud n8n (vide = extrait de package.json)"
-        required: false
-        default: ''
-      working_directory:
-        description: "Répertoire de travail"
-        required: false
-        default: '.'
-        type: string
   workflow_call:
     inputs:
       working_directory:
@@ -19,6 +8,11 @@ on:
         required: false
         default: '.'
         type: string
+      use_ci_artifact:
+        description: "Utiliser l'artifact dist produit par la CI au lieu de rebuild"
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   publish:
@@ -32,14 +26,22 @@ jobs:
         uses: actions/setup-node@v6
         with:
           node-version: 'lts/*'
-          cache: 'npm'
           registry-url: 'https://registry.npmjs.org'
 
+      - name: Récupération de l'artifact de build
+        if: inputs.use_ci_artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: ${{ inputs.working_directory }}/dist
+
       - name: Installation des dépendances
+        if: ${{ !inputs.use_ci_artifact }}
         working-directory: ${{ inputs.working_directory }}
         run: npm ci
 
       - name: Build du projet
+        if: ${{ !inputs.use_ci_artifact }}
         working-directory: ${{ inputs.working_directory }}
         run: npm run build
 
@@ -47,13 +49,7 @@ jobs:
         id: meta
         working-directory: ${{ inputs.working_directory }}
         run: |
-          if [ -n "${{ inputs.package_name }}" ]; then
-            PKG_NAME="${{ inputs.package_name }}"
-            echo "Nom du package fourni en entrée : $PKG_NAME"
-          else
-            PKG_NAME=$(node -p "require('./package.json').name")
-            echo "Nom du package extrait de package.json : $PKG_NAME"
-          fi
+          PKG_NAME=$(node -p "require('./package.json').name")
           PKG_VERSION=$(node -p "require('./package.json').version")
           echo "pkg_name=$PKG_NAME" >> "$GITHUB_OUTPUT"
           echo "pkg_version=$PKG_VERSION" >> "$GITHUB_OUTPUT"

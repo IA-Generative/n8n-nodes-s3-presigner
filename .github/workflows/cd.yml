@@ -5,12 +5,19 @@ on:
     tags:
       - 'v*'
 
-permissions:
-  contents: write
-  id-token: write
-
 jobs:
+  ci:
+    permissions:
+      contents: read
+      actions: write
+    uses: ./.github/workflows/ci.yml
+
   release-npm:
+    needs: ci
+    permissions:
+      contents: write
+      id-token: write
     uses: ./.github/workflows/npm-publish.yml
     with:
       working_directory: .
+      use_ci_artifact: true
